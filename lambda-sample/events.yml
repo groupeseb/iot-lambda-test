@@ -1,0 +1,7 @@
+- http:
+    path: /some-path/{id}
+    method: get
+    cors:
+        origin: '*'
+    authorizer: ${file(common/templates/authorizer.yml)}
+

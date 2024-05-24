@@ -1,0 +1,67 @@
+
+plugins:
+  - serverless-offline
+  - serverless-webpack
+
+custom:
+  var: ${file(config/env.yml)}
+  lambdaSpecificEnv: ${file(${self:service}/config/environment-${opt:aws-profile, 'iot-dev'}.yml), ''}
+
+   # Webpack Config
+  webpack:
+    webpackConfig: 'webpack.config.js'
+    includeModules:
+      forceExclude:
+        - '@aws-sdk/client-dynamodb'
+        - '@aws-sdk/util-dynamodb'
+    compileDir: ${self:service}
+  # Config for serverless-offline
+  serverless-offline:
+      babelOptions:
+        presets: ["env"]
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  profile: ${opt:aws-profile, 'default'}
+  region: ${self:custom.var.config.region}
+  architecture: arm64
+  memorySize: 1024
+  logRetentionInDays: 90
+  stackName: api-${self:service}
+  deploymentPrefix: ${self:service}
+  environment: ${self:custom.var.config.environment}
+
+package:
+  exclude:
+    - aws-sdk
+
+functions:
+  Lambda:
+    handler: ${self:service}/src/handlers/events.index
+    name: api-${self:service}
+    environment: ${file(${self:service}/config/environment.yml), ''}
+    role: LambdaRole
+    timeout: 30
+    events: ${file(${self:service}/events.yml)}
+
+resources:
+  Resources:
+    LambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        Path: /
+        RoleName: iot-backend-${self:service}-role
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        # note that these rights are needed if you want your function to be able to communicate with resources within your vpc
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess

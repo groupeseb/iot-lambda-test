@@ -1,0 +1,7 @@
+- http:
+    path: /get-all-ids # J'imagine qu'il faut changer le path comme j'ai changé le nom de la route dans events.ts
+    method: get
+    cors:
+        origin: '*'
+    authorizer: ${file(common/templates/authorizer.yml)}
+

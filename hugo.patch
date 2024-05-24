@@ -1,0 +1,219 @@
+From 2634b3fa660b89d7ca55bd9fd1f7791b7a9afedb Mon Sep 17 00:00:00 2001
+From: Hugo Laffay <hugo1.laffay@epitech.eu>
+Date: Fri, 24 May 2024 15:23:21 +0200
+Subject: [PATCH] test fini
+
+---
+ lambda/config/environment-iot-dev.yml         |  1 +
+ lambda/config/environment-iot-preprod.yml     |  1 +
+ lambda/config/environment-iot-prod.yml        |  1 +
+ lambda/config/environment-iot-uat.yml         |  1 +
+ lambda/config/resources.yml                   |  1 +
+ lambda/events.yml                             |  7 ++++
+ .../src/controllers/get-all-ids-controller.ts | 30 ++++++++++++++
+ lambda/src/controllers/get-contact.ts         | 19 +++++++++
+ lambda/src/handlers/events.ts                 | 27 +++++++++++++
+ lambda/src/services/dynamodb.service.ts       | 40 +++++++++++++++++++
+ 10 files changed, 128 insertions(+)
+ create mode 100644 lambda/config/environment-iot-dev.yml
+ create mode 100644 lambda/config/environment-iot-preprod.yml
+ create mode 100644 lambda/config/environment-iot-prod.yml
+ create mode 100644 lambda/config/environment-iot-uat.yml
+ create mode 100644 lambda/config/resources.yml
+ create mode 100644 lambda/events.yml
+ create mode 100644 lambda/src/controllers/get-all-ids-controller.ts
+ create mode 100644 lambda/src/controllers/get-contact.ts
+ create mode 100644 lambda/src/handlers/events.ts
+ create mode 100644 lambda/src/services/dynamodb.service.ts
+
+diff --git a/lambda/config/environment-iot-dev.yml b/lambda/config/environment-iot-dev.yml
+new file mode 100644
+index 0000000..0967ef4
+--- /dev/null
++++ b/lambda/config/environment-iot-dev.yml
+@@ -0,0 +1 @@
++{}
+diff --git a/lambda/config/environment-iot-preprod.yml b/lambda/config/environment-iot-preprod.yml
+new file mode 100644
+index 0000000..0967ef4
+--- /dev/null
++++ b/lambda/config/environment-iot-preprod.yml
+@@ -0,0 +1 @@
++{}
+diff --git a/lambda/config/environment-iot-prod.yml b/lambda/config/environment-iot-prod.yml
+new file mode 100644
+index 0000000..0967ef4
+--- /dev/null
++++ b/lambda/config/environment-iot-prod.yml
+@@ -0,0 +1 @@
++{}
+diff --git a/lambda/config/environment-iot-uat.yml b/lambda/config/environment-iot-uat.yml
+new file mode 100644
+index 0000000..0967ef4
+--- /dev/null
++++ b/lambda/config/environment-iot-uat.yml
+@@ -0,0 +1 @@
++{}
+diff --git a/lambda/config/resources.yml b/lambda/config/resources.yml
+new file mode 100644
+index 0000000..882b244
+--- /dev/null
++++ b/lambda/config/resources.yml
+@@ -0,0 +1 @@
++policies: []
+diff --git a/lambda/events.yml b/lambda/events.yml
+new file mode 100644
+index 0000000..235bfc3
+--- /dev/null
++++ b/lambda/events.yml
+@@ -0,0 +1,7 @@
++- http:
++    path: /get-all-ids # J'imagine qu'il faut changer le path comme j'ai changé le nom de la route dans events.ts
++    method: get
++    cors:
++        origin: '*'
++    authorizer: ${file(common/templates/authorizer.yml)}
++
+diff --git a/lambda/src/controllers/get-all-ids-controller.ts b/lambda/src/controllers/get-all-ids-controller.ts
+new file mode 100644
+index 0000000..d65090c
+--- /dev/null
++++ b/lambda/src/controllers/get-all-ids-controller.ts
+@@ -0,0 +1,30 @@
++import { Controller } from "@common/controller";
++import { ControllerError } from "@common/errors/ControllerError";
++import { ControllerResult } from "@common/models/controller-result";
++import { DynamodbService } from '../services/dynamodb.service';
++
++export class GetContactController extends Controller<null, null, never, number[]> {
++
++  private db = new DynamodbService(this.awsConfig);
++
++  validateInputs(body: string | null, queryParams: { id: string } | null, pathParams: never): void {
++    if (!queryParams?.id?.length) {
++      throw new ControllerError(400, 'input id is required in query parameters', queryParams);
++    }
++  }
++
++  async handle(body: null, queryParams: null, pathParams: never): Promise<ControllerResult<number[]>> {
++    try {
++      const contactsList = await this.db.getContactsList();
++      return new ControllerResult<number[]>({
++        status: 200,
++        body: contactsList // Pas sur du type de retour, si il vaut mieux renvoyer une string il faut changer le type
++        // passé à la classe Controller : Controller<null, null, never, string> et 
++        // utiliser stringify sur contactsList: body: JSON.stringify(contactsList)
++        // et changer le type de retour de handle(): Promise<ControllerResult<string>>
++      });
++    } catch (error) {
++      throw new ControllerError(500, 'failed to retrieve contacts list', error);
++    }
++  }
++}
+diff --git a/lambda/src/controllers/get-contact.ts b/lambda/src/controllers/get-contact.ts
+new file mode 100644
+index 0000000..a20e65c
+--- /dev/null
++++ b/lambda/src/controllers/get-contact.ts
+@@ -0,0 +1,19 @@
++import { Controller } from "@common/controller";
++import { ControllerError } from "@common/errors/ControllerError";
++import { ControllerResult } from "@common/models/controller-result";
++import { DynamodbService } from '../services/dynamodb.service';
++
++export class GetAllIdsController extends Controller<null, null, never, number[]> {
++
++  private db = new DynamodbService(this.awsConfig);
++
++  validateInputs(body: string | null, queryParams: { id: string } | null, pathParams: never): void {
++    if (!queryParams?.id?.length) {
++      throw new ControllerError(400, 'input id is required in query parameters', queryParams);
++    }
++  }
++
++  async handle(body: null, queryParams: null, pathParams: never): Promise<ControllerResult<number[]>> {
++
++  }
++}
+diff --git a/lambda/src/handlers/events.ts b/lambda/src/handlers/events.ts
+new file mode 100644
+index 0000000..a9e6fac
+--- /dev/null
++++ b/lambda/src/handlers/events.ts
+@@ -0,0 +1,27 @@
++import { AbstractEventsHandler } from '@common/handlers/events-handler';
++import { APIGatewayEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
++import { GetContactController } from '../controllers/get-all-ids-controller';
++
++// Force webpack into keeping some raw files
++// eslint-disable-next-line unused-imports/no-unused-vars
++function rawFilesToIncludeInBundle(): void {
++  require('../../events.yml');
++}
++
++export class EventsHandler extends AbstractEventsHandler {
++  index(
++    event: APIGatewayEvent,
++    context: Context
++  ): Promise<APIGatewayProxyResult> {
++    return this.commonEvents.index(event, context, {
++      'get-/get-all-ids': new GetContactController(this.awsConfig), // J'imagine qu'il faut changer le path à ce niveau pour lier la route au controller
++    });
++  }
++}
++
++export function index(
++  event: APIGatewayEvent,
++  context: Context
++): Promise<APIGatewayProxyResult> {
++  return new EventsHandler(event).index(event, context);
++}
+diff --git a/lambda/src/services/dynamodb.service.ts b/lambda/src/services/dynamodb.service.ts
+new file mode 100644
+index 0000000..f4d733c
+--- /dev/null
++++ b/lambda/src/services/dynamodb.service.ts
+@@ -0,0 +1,40 @@
++import {
++  DynamoDBClient,
++  ScanCommand,
++  ScanCommandOutput
++} from '@aws-sdk/client-dynamodb';
++import { unmarshall } from '@aws-sdk/util-dynamodb';
++import { AwsConfig } from '@common/models/aws-config';
++
++export class DynamodbService {
++  private readonly dynamoClient: DynamoDBClient;
++
++  constructor(awsConfig: AwsConfig) {
++    this.dynamoClient = new DynamoDBClient(awsConfig);
++  }
++
++  async getContactsList(): Promise<number[]> {
++    let result: ScanCommandOutput = await this.dynamoClient.send(
++      new ScanCommand({
++        TableName: 'AddressBook',
++        ProjectionExpression: 'id',
++      })
++    );
++
++    return result.Items?.map((item) => unmarshall(item).id) ?? [];
++  }
++
++  // async getContact(): Promise<unknown> {
++  //   const input = {
++  //     Key: {
++
++  //     TableName: 'AddressBook',
++  //   };
++
++  //   let result: GetItemCommandOutput = await this.dynamoClient.send(
++  //     new GetItemCommand(input)
++  //   );
++
++  //   return {};
++  // }
++}
+-- 
+2.39.2.windows.1
+
